@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
+import { Authenticator } from '@aws-amplify/ui-react'
+import '@aws-amplify/ui-react/styles.css'
 import outputs from '../amplify_outputs.json'
 
 Amplify.configure(outputs)
@@ -21,7 +23,13 @@ function App() {
       .catch(() => setMessage('Error connecting to Lambda'))
 
     client.models.Profile.list()
-      .then(({ data }) => setProfiles(data))
+      .then(({ data, errors }) => {
+        if (errors?.length) {
+          console.error('Error loading profiles:', errors)
+          return
+        }
+        setProfiles(data)
+      })
       .catch(error => console.error('Error loading profiles:', error))
   }, [])
 
@@ -52,49 +60,64 @@ function App() {
   }
 
   return (
-    <main>
-      <h1>Profiles App</h1>
-      <p>Created by Celia Gonzalez</p>
-      <p>{message}</p>
+    <Authenticator>
+      {({ signOut, user }) => (
+        <main>
+          <h1>Profiles App</h1>
+          <p>Created by Celia Gonzalez</p>
 
-      <h2>Profiles</h2>
-      <form onSubmit={addProfile}>
-        <div>
-          <label htmlFor="profile-name">Name:</label>
-          <input
-            id="profile-name"
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="profile-bio">Bio:</label>
-          <input
-            id="profile-bio"
-            type="text"
-            value={bio}
-            onChange={(event) => setBio(event.target.value)}
-          />
-        </div>
+          <p>
+            Signed in as: {user?.signInDetails?.loginId}
+          </p>
 
-        <button type="submit">Save Profile</button>
-      </form>
+          <button type="button" onClick={signOut}>
+            Sign Out
+          </button>
 
-      {profiles.length === 0 ? (
-        <p>No profiles found yet.</p>
-      ) : (
-        <ul>
-          {profiles.map(profile => (
-            <li key={profile.id}>
-              <strong>{profile.name}</strong>
-              {profile.bio && <p>{profile.bio}</p>}
-            </li>
-          ))}
-        </ul>
+          <p>{message}</p>
+
+          <h2>Profiles</h2>
+
+          <form onSubmit={addProfile}>
+            <div>
+              <label htmlFor="profile-name">Name:</label>
+              <input
+                id="profile-name"
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="profile-bio">Bio:</label>
+              <input
+                id="profile-bio"
+                type="text"
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+              />
+            </div>
+
+            <button type="submit">Save Profile</button>
+          </form>
+
+          {profiles.length === 0 ? (
+            <p>No profiles found yet.</p>
+          ) : (
+            <ul>
+              {profiles.map(profile => (
+                <li key={profile.id}>
+                  <strong>{profile.name}</strong>
+                  {profile.bio && <p>{profile.bio}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </main>
       )}
-    </main>
+    </Authenticator>
   )
 }
 
