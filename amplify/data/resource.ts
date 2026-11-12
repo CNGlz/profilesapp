@@ -12,7 +12,7 @@ const schema = a.schema({
       name: a.string().required(),
       bio: a.string(),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
