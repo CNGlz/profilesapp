@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
-import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
+import { Authenticator } from '@aws-amplify/ui-react'
 import '@aws-amplify/ui-react/styles.css'
 import outputs from '../amplify_outputs.json'
 
@@ -145,15 +145,11 @@ function ProfileContent({ signOut, user }) {
 }
 
 function App() {
-  const { authStatus } = useAuthenticator(context => [context.authStatus])
-
   return (
     <Authenticator>
-      {({ signOut, user }) =>
-        authStatus === 'authenticated' ? (
-          <ProfileContent signOut={signOut} user={user} />
-        ) : null
-      }
+      {({ signOut, user }) => (
+        <ProfileContent signOut={signOut} user={user} />
+      )}
     </Authenticator>
   )
 }
