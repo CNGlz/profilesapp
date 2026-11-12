@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
@@ -8,35 +7,46 @@ import outputs from '../amplify_outputs.json'
 
 Amplify.configure(outputs)
 
-const client = generateClient()
+const client = generateClient({ authMode: 'userPool' })
 
 function App() {
   const [message, setMessage] = useState('Loading...')
   const [profiles, setProfiles] = useState([])
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     fetch('https://qnan3nwe54gurfmnhtpyfcb3te0avdnq.lambda-url.us-east-2.on.aws/')
       .then(response => response.json())
       .then(data => setMessage(data.message))
       .catch(() => setMessage('Error connecting to Lambda'))
-
-    client.models.Profile.list()
-      .then(({ data, errors }) => {
-        if (errors?.length) {
-          console.error('Error loading profiles:', errors)
-          return
-        }
-        setProfiles(data)
-      })
-      .catch(error => console.error('Error loading profiles:', error))
   }, [])
+
+  async function loadProfiles() {
+    try {
+      const { data, errors } = await client.models.Profile.list()
+
+      if (errors?.length) {
+        console.error('Error loading profiles:', errors)
+        setErrorMessage(errors.map(error => error.message).join(', '))
+        return
+      }
+
+      setProfiles([...data])
+      setErrorMessage('')
+    } catch (error) {
+      console.error('Error loading profiles:', error)
+      setErrorMessage('Unable to load profiles.')
+    }
+  }
 
   async function addProfile(event) {
     event.preventDefault()
 
     if (!name.trim()) return
+
+    setErrorMessage('')
 
     try {
       const { data, errors } = await client.models.Profile.create({
@@ -46,6 +56,7 @@ function App() {
 
       if (errors?.length) {
         console.error('Error saving profile:', errors)
+        setErrorMessage(errors.map(error => error.message).join(', '))
         return
       }
 
@@ -56,6 +67,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error saving profile:', error)
+      setErrorMessage('Unable to save profile.')
     }
   }
 
@@ -85,7 +97,7 @@ function App() {
                 id="profile-name"
                 type="text"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={event => setName(event.target.value)}
                 required
               />
             </div>
@@ -96,12 +108,18 @@ function App() {
                 id="profile-bio"
                 type="text"
                 value={bio}
-                onChange={(event) => setBio(event.target.value)}
+                onChange={event => setBio(event.target.value)}
               />
             </div>
 
             <button type="submit">Save Profile</button>
           </form>
+
+          {errorMessage && (
+            <p role="alert" style={{ color: 'red' }}>
+              {errorMessage}
+            </p>
+          )}
 
           {profiles.length === 0 ? (
             <p>No profiles found yet.</p>
@@ -115,6 +133,10 @@ function App() {
               ))}
             </ul>
           )}
+
+          <button type="button" onClick={loadProfiles}>
+            Refresh Profiles
+          </button>
         </main>
       )}
     </Authenticator>
