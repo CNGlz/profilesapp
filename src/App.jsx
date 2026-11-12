@@ -1,7 +1,8 @@
+
 import { useEffect, useState } from 'react'
 import { Amplify } from 'aws-amplify'
 import { generateClient } from 'aws-amplify/data'
-import { Authenticator } from '@aws-amplify/ui-react'
+import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
 import '@aws-amplify/ui-react/styles.css'
 import outputs from '../amplify_outputs.json'
 
@@ -9,7 +10,7 @@ Amplify.configure(outputs)
 
 const client = generateClient({ authMode: 'userPool' })
 
-function App() {
+function ProfileContent({ signOut, user }) {
   const [message, setMessage] = useState('Loading...')
   const [profiles, setProfiles] = useState([])
   const [name, setName] = useState('')
@@ -40,6 +41,10 @@ function App() {
       setErrorMessage('Unable to load profiles.')
     }
   }
+
+  useEffect(() => {
+    loadProfiles()
+  }, [])
 
   async function addProfile(event) {
     event.preventDefault()
@@ -72,73 +77,83 @@ function App() {
   }
 
   return (
-    <Authenticator>
-      {({ signOut, user }) => (
-        <main>
-          <h1>Profiles App</h1>
-          <p>Created by Celia Gonzalez</p>
+    <main>
+      <h1>Profiles App</h1>
+      <p>Created by Celia Gonzalez</p>
 
-          <p>
-            Signed in as: {user?.signInDetails?.loginId}
-          </p>
+      <p>
+        Signed in as: {user?.signInDetails?.loginId}
+      </p>
 
-          <button type="button" onClick={signOut}>
-            Sign Out
-          </button>
+      <button type="button" onClick={signOut}>
+        Sign Out
+      </button>
 
-          <p>{message}</p>
+      <p>{message}</p>
 
-          <h2>Profiles</h2>
+      <h2>Profiles</h2>
 
-          <form onSubmit={addProfile}>
-            <div>
-              <label htmlFor="profile-name">Name:</label>
-              <input
-                id="profile-name"
-                type="text"
-                value={name}
-                onChange={event => setName(event.target.value)}
-                required
-              />
-            </div>
+      <form onSubmit={addProfile}>
+        <div>
+          <label htmlFor="profile-name">Name:</label>
+          <input
+            id="profile-name"
+            type="text"
+            value={name}
+            onChange={event => setName(event.target.value)}
+            required
+          />
+        </div>
 
-            <div>
-              <label htmlFor="profile-bio">Bio:</label>
-              <input
-                id="profile-bio"
-                type="text"
-                value={bio}
-                onChange={event => setBio(event.target.value)}
-              />
-            </div>
+        <div>
+          <label htmlFor="profile-bio">Bio:</label>
+          <input
+            id="profile-bio"
+            type="text"
+            value={bio}
+            onChange={event => setBio(event.target.value)}
+          />
+        </div>
 
-            <button type="submit">Save Profile</button>
-          </form>
+        <button type="submit">Save Profile</button>
+      </form>
 
-          {errorMessage && (
-            <p role="alert" style={{ color: 'red' }}>
-              {errorMessage}
-            </p>
-          )}
-
-          {profiles.length === 0 ? (
-            <p>No profiles found yet.</p>
-          ) : (
-            <ul>
-              {profiles.map(profile => (
-                <li key={profile.id}>
-                  <strong>{profile.name}</strong>
-                  {profile.bio && <p>{profile.bio}</p>}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button type="button" onClick={loadProfiles}>
-            Refresh Profiles
-          </button>
-        </main>
+      {errorMessage && (
+        <p role="alert" style={{ color: 'red' }}>
+          {errorMessage}
+        </p>
       )}
+
+      {profiles.length === 0 ? (
+        <p>No profiles found yet.</p>
+      ) : (
+        <ul>
+          {profiles.map(profile => (
+            <li key={profile.id}>
+              <strong>{profile.name}</strong>
+              {profile.bio && <p>{profile.bio}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <button type="button" onClick={loadProfiles}>
+        Refresh Profiles
+      </button>
+    </main>
+  )
+}
+
+function App() {
+  const { authStatus } = useAuthenticator(context => [context.authStatus])
+
+  return (
+    <Authenticator>
+      {({ signOut, user }) =>
+        authStatus === 'authenticated' ? (
+          <ProfileContent signOut={signOut} user={user} />
+        ) : null
+      }
     </Authenticator>
   )
 }
